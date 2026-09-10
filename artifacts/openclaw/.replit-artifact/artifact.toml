@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Strata Palimpsest"
+version = "1.0.0"
+id = "artifacts/openclaw"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20581
+
+[services.development]
+run = "pnpm --filter @workspace/openclaw run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/openclaw", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/openclaw/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20581"
+BASE_PATH = "/"

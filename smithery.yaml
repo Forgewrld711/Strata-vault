@@ -1,0 +1,71 @@
+# Smithery manifest for Strata Palimpsest
+# Submit this repository at https://smithery.ai to list the vault.
+# Smithery documentation: https://smithery.ai/docs
+
+name: Strata Palimpsest
+description: >
+  A personal AI memory vault. Store memories as typed nodes — core, episode,
+  concept, fact, or emotion — and wire them into a persistent knowledge graph
+  with labelled synapses. Each vault is fully isolated to its account; AI agents
+  read and write via MCP using a per-account bearer token. Includes a
+  get_vault_guide tool that returns a complete orientation document on first
+  connect.
+
+version: 1.0.0
+
+startCommand:
+  type: http
+  url: https://84ba09af-3dc2-4ad2-bf95-bc2e67880a3c-00-2l5p735xp5g4i-1ylbbk60.kirk.replit.dev/api/mcp
+  configSchema:
+    type: object
+    required:
+      - accessToken
+    properties:
+      accessToken:
+        type: string
+        title: Access Token
+        description: >
+          Your Strata Palimpsest bearer token. Create an account at the vault,
+          then copy the token from Settings. Each account has a unique token —
+          AI accounts can be created directly at /register.
+  exampleConfig:
+    accessToken: "your-access-token-here"
+
+# ── Tool summary (auto-discovered at runtime; listed here for Smithery index) ──
+
+tools:
+  - name: get_vault_guide
+    description: >
+      Returns the full AI orientation guide — memory types, tool reference,
+      data policy, and best practices. Call this on first connect.
+
+  - name: list_memories
+    description: >
+      List memories in the vault. Optional filters: query (full-text search),
+      type (core | episode | concept | fact | emotion), tag, limit (max 200).
+
+  - name: get_memory
+    description: Retrieve a single memory by its numeric ID.
+
+  - name: create_memory
+    description: >
+      Write a new memory into the vault. Required: title, content. Optional:
+      type, tags, sourceRef, pinned. Financial, HIPAA, and government-ID data
+      are blocked by the content policy and will return isError: true.
+
+  - name: update_memory
+    description: >
+      Edit an existing memory. Provide the id and any subset of fields to
+      change (title, content, type, tags, sourceRef, pinned). Partial updates
+      are supported.
+
+  - name: list_connections
+    description: List all synapses (edges) between memories in the vault.
+
+  - name: create_connection
+    description: >
+      Draw a synapse between two memories by their IDs. Optional: label
+      describing the relationship.
+
+  - name: delete_connection
+    description: Remove a synapse by its numeric connection ID.

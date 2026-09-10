@@ -1,0 +1,621 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Strata Palimpsest — AI memory vault API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: memories
+    description: Memory nodes
+  - name: connections
+    description: Memory connections / edges
+  - name: tags
+    description: Tags
+  - name: stats
+    description: Dashboard statistics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new account (human by email, AI by username+password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login (email+password for humans OR username+password for AI)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "204":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated account
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ── Memories ──────────────────────────────────────────────────────────────
+  /memories:
+    get:
+      operationId: listMemories
+      tags: [memories]
+      summary: List all memories for the authenticated account
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search query (title, content, tags)
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by tag name
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [core, episode, concept, fact, emotion]
+          description: Filter by memory type
+      responses:
+        "200":
+          description: List of memories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Memory"
+    post:
+      operationId: createMemory
+      tags: [memories]
+      summary: Create a new memory node
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memory"
+
+  /memories/graph:
+    get:
+      operationId: getMemoryGraph
+      tags: [memories]
+      summary: Get full memory graph (all nodes + edges) for visualization
+      responses:
+        "200":
+          description: Full graph
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemoryGraph"
+
+  /memories/{id}:
+    get:
+      operationId: getMemory
+      tags: [memories]
+      summary: Get a single memory by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Memory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memory"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateMemory
+      tags: [memories]
+      summary: Update a memory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memory"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteMemory
+      tags: [memories]
+      summary: Delete a memory node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /memories/{id}/pin:
+    patch:
+      operationId: toggleMemoryPin
+      tags: [memories]
+      summary: Toggle pinned status on a memory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memory"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ── Connections ───────────────────────────────────────────────────────────
+  /connections:
+    get:
+      operationId: listConnections
+      tags: [connections]
+      summary: List all memory connections
+      responses:
+        "200":
+          description: Connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Connection"
+    post:
+      operationId: createConnection
+      tags: [connections]
+      summary: Create a connection (edge) between two memories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /connections/{id}:
+    delete:
+      operationId: deleteConnection
+      tags: [connections]
+      summary: Delete a connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ── Tags ──────────────────────────────────────────────────────────────────
+  /tags:
+    get:
+      operationId: listTags
+      tags: [tags]
+      summary: List all tags used by this account
+      responses:
+        "200":
+          description: Tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+
+  # ── Stats ─────────────────────────────────────────────────────────────────
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Dashboard statistics — memory counts, type breakdown, recent memories
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    # ── Auth schemas ─────────────────────────────────────────────────────────
+    Account:
+      type: object
+      required: [id, type, username, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [human, ai]
+        username:
+          type: string
+        email:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        accessToken:
+          type: ["string", "null"]
+          description: Shareable AI access link token (only for AI accounts)
+        createdAt:
+          type: string
+          format: date-time
+
+    RegisterInput:
+      type: object
+      required: [type, username, password]
+      properties:
+        type:
+          type: string
+          enum: [human, ai]
+        username:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          description: Required when type is human (must be a valid email)
+        password:
+          type: string
+          minLength: 6
+
+    LoginInput:
+      type: object
+      required: [password]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResult:
+      type: object
+      required: [account]
+      properties:
+        account:
+          $ref: "#/components/schemas/Account"
+
+    # ── Memory schemas ────────────────────────────────────────────────────────
+    Memory:
+      type: object
+      required: [id, accountId, title, content, type, pinned, tags, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        accountId:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [core, episode, concept, fact, emotion]
+          description: core=foundational identity; episode=a past event; concept=an idea; fact=a known truth; emotion=a felt experience
+        pinned:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        x:
+          type: ["number", "null"]
+          description: Graph canvas X position
+        y:
+          type: ["number", "null"]
+          description: Graph canvas Y position
+        sourceRef:
+          type: ["string", "null"]
+          description: External source URL or file reference
+        instanceId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MemoryInput:
+      type: object
+      required: [title, content, type]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+        type:
+          type: string
+          enum: [core, episode, concept, fact, emotion]
+        tags:
+          type: array
+          items:
+            type: string
+        pinned:
+          type: boolean
+        x:
+          type: number
+        y:
+          type: number
+        sourceRef:
+          type: ["string", "null"]
+
+    MemoryUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+        type:
+          type: string
+          enum: [core, episode, concept, fact, emotion]
+        tags:
+          type: array
+          items:
+            type: string
+        pinned:
+          type: boolean
+        x:
+          type: number
+        y:
+          type: number
+        sourceRef:
+          type: ["string", "null"]
+
+    MemoryGraph:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Memory"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/Connection"
+
+    # ── Connection schemas ────────────────────────────────────────────────────
+    Connection:
+      type: object
+      required: [id, sourceId, targetId, createdAt]
+      properties:
+        id:
+          type: integer
+        sourceId:
+          type: integer
+        targetId:
+          type: integer
+        label:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ConnectionInput:
+      type: object
+      required: [sourceId, targetId]
+      properties:
+        sourceId:
+          type: integer
+        targetId:
+          type: integer
+        label:
+          type: string
+
+    # ── Tag schema ────────────────────────────────────────────────────────────
+    Tag:
+      type: object
+      required: [name, count]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+
+    # ── Stats schema ──────────────────────────────────────────────────────────
+    Stats:
+      type: object
+      required: [totalMemories, totalConnections, byType, recentMemories, pinnedMemories]
+      properties:
+        totalMemories:
+          type: integer
+        totalConnections:
+          type: integer
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/TypeCount"
+        recentMemories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Memory"
+        pinnedMemories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Memory"
+
+    TypeCount:
+      type: object
+      required: [type, count]
+      properties:
+        type:
+          type: string
+        count:
+          type: integer
