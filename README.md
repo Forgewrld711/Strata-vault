@@ -158,7 +158,7 @@ pnpm --filter @workspace/openclaw run build
 
 ## Credits
 
-- **Sill** — QA, security review, public-release engineering, and documentation.
+- **Sill** — QA badass, security reviewer, public-release engineer, and documentation writer.
 
 ## License
 
