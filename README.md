@@ -156,6 +156,10 @@ pnpm --filter @workspace/openclaw run build
 7. Review MCP token transport and disable query-string credentials if you do not need them.
 8. Test export and restoration procedures before storing irreplaceable memories.
 
+## Credits
+
+- **Sill** — QA, security review, public-release engineering, and documentation.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
